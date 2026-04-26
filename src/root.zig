@@ -5,6 +5,41 @@ const rl = @import("raylib");
 
 var shadowShader: ?rl.Shader = null;
 
+pub const ShadowPaneChain = struct {
+    color: rl.Color,
+    vecs: []rl.Vector2,
+
+    pub fn init(
+        color: rl.Color,
+        vecs: []rl.Vector2
+    ) ShadowPaneChain
+    {
+        return ShadowPaneChain {
+            .color = color,
+            .vecs = vecs
+        };
+    }
+};
+
+pub const LightPane = struct {
+    focus: f32,
+    start: rl.Vector2,
+    end: rl.Vector2,
+
+    pub fn init(
+        focus: f32,
+        start: rl.Vector2,
+        end: rl.Vector2
+    ) LightPane
+    {
+        return LightPane {
+            .focus = focus,
+            .start = start,
+            .end = end
+        };
+    }
+};
+
 pub const ShadowData = struct {
     baseTexture: rl.Texture,
     source: rl.Rectangle,
