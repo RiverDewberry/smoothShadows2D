@@ -61,7 +61,15 @@ pub const ShadowData = struct {
     pub fn drawShadows(self: ShadowData) void
     {
         rl.beginShaderMode(shadowShader.?);
-   
+
+        const positionLocation = rl.getShaderLocation(
+            shadowShader.?, "position"
+            );
+        rl.setShaderValue(
+            shadowShader.?, positionLocation, 
+            &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
+            rl.ShaderUniformDataType.vec4);
+
         self.baseTexture.drawPro(
             self.source,
             self.dest,
