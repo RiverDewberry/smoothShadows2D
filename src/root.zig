@@ -25,17 +25,20 @@ pub const LightPane = struct {
     focus: f32,
     start: rl.Vector2,
     end: rl.Vector2,
+    color: rl.Color,
 
     pub fn init(
         focus: f32,
         start: rl.Vector2,
-        end: rl.Vector2
+        end: rl.Vector2,
+        color: rl.Color
     ) LightPane
     {
         return LightPane {
             .focus = focus,
             .start = start,
-            .end = end
+            .end = end,
+            .color = color
         };
     }
 };
@@ -44,17 +47,20 @@ pub const ShadowData = struct {
     baseTexture: rl.Texture,
     source: rl.Rectangle,
     dest: rl.Rectangle,
+    lights: []LightPane,
 
     pub fn init(
         texture: rl.Texture,
         source: rl.Rectangle,
-        dest: rl.Rectangle
+        dest: rl.Rectangle,
+        lights: []LightPane
     ) ShadowData
     {
         return ShadowData{
             .source = source,
             .dest = dest,
-            .baseTexture = texture
+            .baseTexture = texture,
+            .lights = lights
         };
     }
 

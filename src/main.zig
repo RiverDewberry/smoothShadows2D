@@ -15,10 +15,17 @@ pub fn main(init: std.process.Init) !void {
     try smoothShadows2D.initShadowShader();
     defer smoothShadows2D.deinitShadowShader();
 
+    const light = smoothShadows2D.LightPane.init(
+        1, rl.Vector2.init(100, 100),
+        rl.Vector2.init(400, 400),
+        rl.Color.init(255, 255, 255, 255)
+    );
+
     const shadowDrawer = smoothShadows2D.ShadowData.init(
         baseTexture,
         rl.Rectangle.init(0, 0, 1, 1),
-        rl.Rectangle.init(0, 0, 500, 500)
+        rl.Rectangle.init(0, 0, 500, 500),
+        []smoothShadows2D.LightPane{light}
     );
 
     rl.setTargetFPS(30);
