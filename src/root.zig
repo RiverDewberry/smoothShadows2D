@@ -69,11 +69,27 @@ pub const ShadowData = struct {
         rl.beginShaderMode(shadowShader.?);
 
         const positionLocation = rl.getShaderLocation(
-            shadowShader.?, "position"
-            );
+            shadowShader.?, "position");
         rl.setShaderValue(
             shadowShader.?, positionLocation, 
             &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
+            rl.ShaderUniformDataType.vec4);
+
+        const lightColorLocation = rl.getShaderLocation(
+            shadowShader.?, "lightColor");
+        const lightPositionLocation = rl.getShaderLocation(
+            shadowShader.?, "lightPosition");
+
+        const light = self.lights[0];
+        const lightColor = light.color.normalize();
+
+        rl.setShaderValue(
+            shadowShader.?, lightPositionLocation, 
+            &[4]f32{light.start.x, light.start.y, light.end.x, light.end.y},
+            rl.ShaderUniformDataType.vec4);
+        rl.setShaderValue(
+            shadowShader.?, lightColorLocation, 
+            &[4]f32{lightColor.x, lightColor.y, lightColor.z, light.focus},
             rl.ShaderUniformDataType.vec4);
 
         self.baseTexture.drawPro(
