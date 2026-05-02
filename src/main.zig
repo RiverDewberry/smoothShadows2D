@@ -16,22 +16,23 @@ pub fn main(init: std.process.Init) !void {
     defer smoothShadows2D.deinitShadowShader();
 
     var light = smoothShadows2D.LightPane.init(
-        1, rl.Vector2.init(100, 100),
+        0.0,
+        rl.Vector2.init(100, 100),
         rl.Vector2.init(400, 400),
-        rl.Color.init(255, 255, 255, 255)
+        rl.Color.init(155, 155, 255, 255)
     );
 
     var lights = [_]smoothShadows2D.LightPane{light};
     _ = &light;
 
-    const shadowDrawer = smoothShadows2D.ShadowData.init(
+    var shadowDrawer = smoothShadows2D.ShadowData.init(
         baseTexture,
         rl.Rectangle.init(0, 0, 1, 1),
         rl.Rectangle.init(0, 0, 500, 500),
         &lights
     );
 
-    rl.setTargetFPS(30);
+    //rl.setTargetFPS(30);
 
     var flipFlop = false;
 
@@ -52,6 +53,8 @@ pub fn main(init: std.process.Init) !void {
 
         rl.beginDrawing();
 
+        shadowDrawer.dest.width = @floatFromInt(rl.getScreenWidth());
+        shadowDrawer.dest.height = @floatFromInt(rl.getScreenHeight());
         shadowDrawer.drawShadows();
 
         rl.drawRectangleLines(
@@ -63,6 +66,16 @@ pub fn main(init: std.process.Init) !void {
             @trunc(lights[0].end.x - 10),
             @trunc(lights[0].end.y - 10),
             20, 20, rl.Color.blue);
+
+        var fpsTextBuffer: [256:0]u8 = undefined;
+        _ = try std.fmt.bufPrint(&fpsTextBuffer, "{}\x00", .{rl.getFPS()});
+        rl.drawText(
+            &fpsTextBuffer,
+            10,
+            10,
+            10,
+            rl.Color.green
+        );
 
         rl.endDrawing();
     }
