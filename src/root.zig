@@ -4,6 +4,7 @@ const Io = std.Io;
 const rl = @import("raylib");
 
 var shadowShader: ?rl.Shader = null;
+var lightAreaShader: ?rl.Shader = null;
 
 pub const ShadowPaneChain = struct {
     color: rl.Color,
@@ -26,6 +27,7 @@ pub const LightPane = struct {
     start: rl.Vector2,
     end: rl.Vector2,
     color: rl.Color,
+    cache: rl.RenderTexture,
 
     pub fn init(
         focus: f32,
@@ -38,7 +40,8 @@ pub const LightPane = struct {
             .focus = focus,
             .start = start,
             .end = end,
-            .color = color
+            .color = color,
+            .cache = undefined
         };
     }
 };
@@ -48,23 +51,48 @@ pub const ShadowData = struct {
     source: rl.Rectangle,
     dest: rl.Rectangle,
     lights: []LightPane,
+    redrawArea: rl.RenderTexture,
 
     pub fn init(
         texture: rl.Texture,
         source: rl.Rectangle,
         dest: rl.Rectangle,
-        lights: []LightPane
-    ) ShadowData
+        lights: []LightPane,
+    ) !ShadowData
     {
-        return ShadowData{
+        var retval = ShadowData{
             .source = source,
             .dest = dest,
             .baseTexture = texture,
-            .lights = lights
+            .lights = lights,
+            .redrawArea = try rl.RenderTexture.init(
+                @trunc(dest.width),
+                @trunc(dest.height))
         };
+
+        for (lights, 0..) |_, i|
+        {
+            retval.lights[i].cache = try rl.RenderTexture.init(
+                @trunc(dest.width),
+                @trunc(dest.height));
+            retval.lights[i].cache.begin();
+            rl.clearBackground(rl.Color.black);
+            retval.lights[i].cache.end();
+        }
+
+        return retval;
     }
 
-    pub fn drawShadows(self: ShadowData) void
+    pub fn deinit(self: ShadowData) void
+    {
+        for (self.lights) |light|
+        {
+            light.cache.unload();
+        }
+        self.redrawArea.unload();
+    }
+
+    pub fn recalculateLight(self: ShadowData, lightNum: usize) void
     {
         rl.beginShaderMode(shadowShader.?);
 
@@ -80,7 +108,8 @@ pub const ShadowData = struct {
         const lightPositionLocation = rl.getShaderLocation(
             shadowShader.?, "lightPosition");
 
-        const light = self.lights[0];
+        const light = self.lights[lightNum];
+        light.cache.begin();
         const lightColor = light.color.normalize();
 
         rl.setShaderValue(
@@ -92,6 +121,47 @@ pub const ShadowData = struct {
             &[4]f32{lightColor.x, lightColor.y, lightColor.z, light.focus},
             rl.ShaderUniformDataType.vec4);
 
+        self.redrawArea.texture.draw(
+            0, 0,
+            rl.Color.white
+        );
+
+        rl.endShaderMode();
+        light.cache.end();
+
+        self.redrawArea.begin();
+        rl.clearBackground(rl.Color.black);
+        self.redrawArea.end();
+    }
+
+    pub fn addLightArea(self: ShadowData, lightNum: usize) void
+    {
+        const light = self.lights[lightNum];
+
+        self.redrawArea.begin();
+        rl.beginShaderMode(lightAreaShader.?);
+
+        const positionLocation = rl.getShaderLocation(
+            lightAreaShader.?, "position");
+        rl.setShaderValue(
+            lightAreaShader.?, positionLocation, 
+            &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
+            rl.ShaderUniformDataType.vec4);
+
+        const lightPositionLocation = rl.getShaderLocation(
+            lightAreaShader.?, "lightPosition");
+        rl.setShaderValue(
+            lightAreaShader.?, lightPositionLocation, 
+            &[4]f32{light.start.x, light.start.y, light.end.x, light.end.y},
+            rl.ShaderUniformDataType.vec4);
+
+        const focusLocation = rl.getShaderLocation(
+            lightAreaShader.?, "focus");
+        rl.setShaderValue(
+            lightAreaShader.?, focusLocation,
+            &[1]f32{light.focus},
+            rl.ShaderUniformDataType.float);
+
         self.baseTexture.drawPro(
             self.source,
             self.dest,
@@ -101,6 +171,7 @@ pub const ShadowData = struct {
         );
 
         rl.endShaderMode();
+        self.redrawArea.end();
     }
 };
 
@@ -108,6 +179,7 @@ pub const ShadowData = struct {
 pub fn initShadowShader() !void
 {
     shadowShader = try rl.loadShader(null, "./shader/shadows.fs");
+    lightAreaShader = try rl.loadShader(null, "./shader/lightArea.fs");
 }
 
 ///unloads shadow shader
@@ -116,5 +188,10 @@ pub fn deinitShadowShader() void {
     {
         rl.unloadShader(shader);
         shadowShader = null;
+    }
+    if (lightAreaShader) |shader|
+    {
+        rl.unloadShader(shader);
+        lightAreaShader = null;
     }
 }

@@ -1,5 +1,10 @@
 #version 330
 
+#define PI 3.14159265359f
+#define TWO_PI 6.28318530718f
+#define HALF_PI 1.57079632679f
+#define ONE_OVER_PI 0.318309886184;
+
 // Input vertex attributes (from vertex shader)
 in vec2 fragTexCoord;
 in vec4 fragColor;
@@ -37,12 +42,12 @@ vec2 getAngleRange(vec2 offset, vec4 line)
             atan(line.w - offset.y, line.z - offset.x));
 }
 
-vec3 shouldRedraw(vec2 location)
+bool shouldRedraw(vec2 location)
 {
-    if (isLeft(location, lightPosition)) return vec3(0.0f, 0.0f, 0.0f);
+    if (isLeft(location, lightPosition)) return false;
 
     vec2 lightRange = getAngleRange(location, lightPosition);
-    if (abs(lightRange.x - lightRange.y) < 0.00001f) return vec3(0.0f, 0.0f, 0.0f);
+    if (abs(lightRange.x - lightRange.y) < 0.00001f) return false;
 
     float angleAccumulator = lightRange.y;
     float endAngle = lightRange.x;
@@ -57,23 +62,23 @@ vec3 shouldRedraw(vec2 location)
         if (endAngle >= angleAccumulator)
         {
             if (taotnotdvotl >= angleAccumulator && taotnotdvotl <= endAngle)
-                return vec3(1.0f, 1.0f, 1.0f);
-            else return vec3(0.0f, 0.0f, 0.0f);
+                return true;
+            else return false;
         } else {
-            if (taotnotdvotl < angleAccumulator && taotnotdvotl > endAngle)
-                return vec3(0.0f, 0.0f, 0.0f);
-            else return vec3(1.0f, 1.0f, 1.0f);
+            if (taotnotdvotl <= angleAccumulator && taotnotdvotl >= endAngle)
+                return false;
+            else return true;
         }
 
-    } else if (lightColor.w != 1.0f)
+    } else if (focus != 1.0f)
     {
         // the arctan of the normal of the direction vector of the line
         float shadowCenterAngle = atan(
            lightPosition.z - lightPosition.x, lightPosition.y - lightPosition.w
         );
 
-        float shadowStartAngle = shadowCenterAngle + lightColor.w * HALF_PI;
-        float shadowEndAngle = shadowCenterAngle - lightColor.w * HALF_PI;
+        float shadowStartAngle = shadowCenterAngle + focus * HALF_PI;
+        float shadowEndAngle = shadowCenterAngle - focus * HALF_PI;
 
         // make sure angles are in proper range
         shadowStartAngle = mod(shadowStartAngle - PI, TWO_PI) - PI;
@@ -82,10 +87,10 @@ vec3 shouldRedraw(vec2 location)
         if (isRangeEngulfed(
                     vec2(angleAccumulator, endAngle),
                     vec2(shadowStartAngle, shadowEndAngle))
-           ) return vec3(0.0f, 0.0f, 0.0f);
+           ) return false;
     }
 
-    return vec3(1.0f, 1.0f, 1.0f);
+    return true;
 }
 
 void main()
@@ -94,5 +99,6 @@ void main()
             position.x + fragTexCoord.x * position.z,
             position.y + fragTexCoord.y * position.w);
 
-    finalColor = vec4(getLocalLight(pixelLocation), 1.0f);
+    finalColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    if (shouldRedraw(pixelLocation)) finalColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }

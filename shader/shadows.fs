@@ -19,6 +19,9 @@ uniform vec4 lightPosition;
 // vec3(x, y, z) = rgb color, w = focus
 uniform vec4 lightColor;
 
+uniform sampler2D texture0;
+uniform sampler2D texture1;
+
 //output color
 out vec4 finalColor;
 
@@ -63,7 +66,7 @@ vec3 getLocalLight(vec2 location)
     float angleAccumulator = lightRange.y;
     float endAngle = lightRange.x;
     
-    if (lightColor.w <= 0.01f)
+    if (lightColor.w <= 0.0001f)
     {
         // the arctan of the normal of the direction vector of the line
         float taotnotdvotl = atan(
@@ -72,11 +75,11 @@ vec3 getLocalLight(vec2 location)
 
         if (endAngle >= angleAccumulator)
         {
-            if (taotnotdvotl >= angleAccumulator && taotnotdvotl <= endAngle)
+            if (taotnotdvotl > angleAccumulator && taotnotdvotl < endAngle)
                 return lightColor.xyz;
             else return vec3(0.0f, 0.0f, 0.0f);
         } else {
-            if (taotnotdvotl <= angleAccumulator && taotnotdvotl >= endAngle)
+            if (taotnotdvotl < angleAccumulator && taotnotdvotl > endAngle)
                 return vec3(0.0f, 0.0f, 0.0f);
             else return lightColor.xyz;
         }
@@ -155,9 +158,15 @@ vec3 getLocalLight(vec2 location)
 
 void main()
 {
+    if (texture(texture0, fragTexCoord).r == 0.0f)
+    {
+        finalColor = vec4(0.0f,0.0f,0.0f,1.0f);
+        return;
+    }
+
     vec2 pixelLocation = vec2(
             position.x + fragTexCoord.x * position.z,
-            position.y + fragTexCoord.y * position.w);
+            position.y + (1 - fragTexCoord.y) * position.w);
 
     finalColor = vec4(getLocalLight(pixelLocation), 1.0f);
 }
