@@ -27,7 +27,7 @@ out vec4 finalColor;
 
 bool isLeft(vec2 offset, vec4 line)
 {
-    return (line.z - line.x)*(offset.y - line.y) - (line.w - line.y)*(offset.x - line.x) >= 0.0f;
+    return (line.z - line.x)*(offset.y - line.y) - (line.w - line.y)*(offset.x - line.x) > 0.0f;
 }
 
 //is range engulfed by range2
