@@ -160,7 +160,7 @@ void main()
 {
     if (texture(texture0, fragTexCoord).r == 0.0f)
     {
-        finalColor = vec4(0.0f,0.0f,0.0f,1.0f);
+        finalColor = vec4(0.0f,0.0f,0.0f,0.0f);
         return;
     }
 

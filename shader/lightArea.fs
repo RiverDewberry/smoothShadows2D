@@ -23,7 +23,7 @@ out vec4 finalColor;
 
 bool isLeft(vec2 offset, vec4 line)
 {
-    return (line.z - line.x)*(offset.y - line.y) - (line.w - line.y)*(offset.x - line.x) >= 0.0f;
+    return (line.z - line.x)*(offset.y - line.y) - (line.w - line.y)*(offset.x - line.x) > 0.05f;
 }
 
 //is range engulfed by range2
@@ -61,11 +61,11 @@ bool shouldRedraw(vec2 location)
 
         if (endAngle >= angleAccumulator)
         {
-            if (taotnotdvotl >= angleAccumulator && taotnotdvotl <= endAngle)
+            if (taotnotdvotl + 0.01f >= angleAccumulator && taotnotdvotl <= endAngle + 0.01f)
                 return true;
             else return false;
         } else {
-            if (taotnotdvotl <= angleAccumulator && taotnotdvotl >= endAngle)
+            if (taotnotdvotl + 0.01f <= angleAccumulator && taotnotdvotl >= endAngle + 0.01f)
                 return false;
             else return true;
         }
