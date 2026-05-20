@@ -5,6 +5,7 @@ const rl = @import("raylib");
 
 var shadowShader: ?rl.Shader = null;
 var lightAreaShader: ?rl.Shader = null;
+var shadowAreaShader: ?rl.Shader = null;
 
 pub const ShadowPaneChain = struct {
     color: rl.Color,
@@ -70,6 +71,10 @@ pub const ShadowData = struct {
                 @trunc(dest.height))
         };
 
+        retval.redrawArea.begin();
+        rl.clearBackground(rl.Color.black);
+        retval.redrawArea.end();
+
         for (lights, 0..) |_, i|
         {
             retval.lights[i].cache = try rl.RenderTexture.init(
@@ -78,6 +83,8 @@ pub const ShadowData = struct {
             retval.lights[i].cache.begin();
             rl.clearBackground(rl.Color.black);
             retval.lights[i].cache.end();
+            retval.addLightArea(i);
+            retval.recalculateLight(i);
         }
 
         return retval;
@@ -180,6 +187,7 @@ pub fn initShadowShader() !void
 {
     shadowShader = try rl.loadShader(null, "./shader/shadows.fs");
     lightAreaShader = try rl.loadShader(null, "./shader/lightArea.fs");
+    shadowAreaShader = try rl.loadShader(null, "./shader/shadowArea.fs");
 }
 
 ///unloads shadow shader
@@ -193,5 +201,10 @@ pub fn deinitShadowShader() void {
     {
         rl.unloadShader(shader);
         lightAreaShader = null;
+    }
+    if (shadowAreaShader) |shader|
+    {
+        rl.unloadShader(shader);
+        shadowAreaShader = null;
     }
 }
