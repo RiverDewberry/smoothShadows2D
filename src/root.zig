@@ -7,18 +7,21 @@ var shadowShader: ?rl.Shader = null;
 var lightAreaShader: ?rl.Shader = null;
 var shadowAreaShader: ?rl.Shader = null;
 
-pub const ShadowPaneChain = struct {
+pub const ShadowPane= struct {
     color: rl.Color,
-    vecs: []rl.Vector2,
+    start: rl.Vector2,
+    end: rl.Vector2,
 
     pub fn init(
         color: rl.Color,
-        vecs: []rl.Vector2
-    ) ShadowPaneChain
+        start: rl.Vector2,
+        end: rl.Vector2,
+    ) ShadowPane
     {
-        return ShadowPaneChain {
+        return ShadowPane{
             .color = color,
-            .vecs = vecs
+            .start = start,
+            .end = end
         };
     }
 };
