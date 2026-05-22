@@ -3,7 +3,9 @@
 #define PI 3.14159265359f
 #define TWO_PI 6.28318530718f
 #define HALF_PI 1.57079632679f
-#define ONE_OVER_PI 0.318309886184;
+#define ONE_OVER_PI 0.318309886184
+
+#define SHADOW_MAX 16
 
 // Input vertex attributes (from vertex shader)
 in vec2 fragTexCoord;
@@ -17,13 +19,19 @@ uniform vec4 position;
 uniform vec4 lightPosition;
 
 // vec3(x, y, z) = rgb color, w = focus
-uniform vec4 lightColor;
+uniform vec4 color;
 
 uniform sampler2D texture0;
 uniform sampler2D texture1;
 
+uniform sampler2D shadowData;
+uniform int shadowCount;
+
 //output color
 out vec4 finalColor;
+
+vec2 rangeArr[SHADOW_MAX];
+vec4 colorArr[SHADOW_MAX];
 
 bool isLeft(vec2 offset, vec4 line)
 {
@@ -56,6 +64,60 @@ vec2 getAngleRange(vec2 offset, vec4 line)
             atan(line.w - offset.y, line.z - offset.x));
 }
 
+bool pointInRange(vec2 range, float point)
+{
+    return (
+        (range.x > range.y) && (point > range.x || point <= range.y)
+    ) || (
+        (range.x < range.y) && (point <= range.y && point > range.x)
+    );
+}
+
+bool linesIntersect(vec2 p1, vec2 p2, vec2 p3, vec2 p4)
+{
+    return (
+        (isLeft(p3, vec4(p1, p2))) !=
+        isLeft(p4, vec4(p1, p2)) &&
+        (isLeft(p1, vec4(p3, p4))) !=
+        isLeft(p2, vec4(p3, p4))
+    );
+}
+
+float sign (vec2 p1, vec2 p2, vec2 p3)
+{
+    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+}
+
+bool pointInTriangle (vec2 pt, vec2 v1, vec2 v2, vec2 v3)
+{
+    float d1, d2, d3;
+    bool has_neg, has_pos;
+
+    d1 = sign(pt, v1, v2);
+    d2 = sign(pt, v2, v3);
+    d3 = sign(pt, v3, v1);
+
+    has_neg = (d1 < 0.0f) || (d2 < 0.0f) || (d3 < 0.0f);
+    has_pos = (d1 > 0.0f) || (d2 > 0.0f) || (d3 > 0.0f);
+
+    return !(has_neg && has_pos);
+}
+
+bool inShadow(vec4 shadow, vec4 light, vec2 point)
+{
+    if (
+            linesIntersect(shadow.xy, shadow.zw, point, light.xy) ||
+            linesIntersect(shadow.xy, shadow.zw, point, light.zw)
+       ) return true;
+
+    if (
+        pointInTriangle(shadow.xy, light.xy, light.zw, point) ||
+        pointInTriangle(shadow.zw, light.xy, light.zw, point)
+    ) return true;
+
+    return false;
+}
+
 vec3 getLocalLight(vec2 location)
 {
     if (isLeft(location, lightPosition)) return vec3(0.0f, 0.0f, 0.0f);
@@ -65,6 +127,8 @@ vec3 getLocalLight(vec2 location)
 
     float angleAccumulator = lightRange.y;
     float endAngle = lightRange.x;
+
+    vec4 lightColor = color;
     
     if (lightColor.w <= 0.0001f)
     {
@@ -139,6 +203,38 @@ vec3 getLocalLight(vec2 location)
         }
     }
 
+    int realShadows = 0;
+    for (int i = 0; i < shadowCount; i++)
+    {
+        vec4 temp = texelFetch(shadowData, ivec2(0, i), 0);
+        if (isLeft(location, temp)) continue;
+        if (!inShadow(temp, lightPosition, location)) continue;
+
+        rangeArr[realShadows] = getAngleRange(location, temp);
+
+        if (abs(rangeArr[realShadows].x - rangeArr[realShadows].y) < 0.00001f)
+            continue;
+
+        colorArr[realShadows] = texelFetch(shadowData, ivec2(1, i), 0);
+
+        if (isRangeEngulfed(
+                    vec2(angleAccumulator, endAngle),
+                    vec2(rangeArr[realShadows].y, rangeArr[realShadows].x))
+        )
+        {
+            lightColor.r *= colorArr[realShadows].r;
+            lightColor.g *= colorArr[realShadows].g;
+            lightColor.b *= colorArr[realShadows].b;
+        }
+
+        if (!doRangesTouch(
+                    vec2(angleAccumulator, endAngle),
+                    vec2(rangeArr[realShadows].x, rangeArr[realShadows].y))
+        ) continue;
+
+        realShadows++;
+    }
+
     vec3 colorAccumulator = vec3(0.0f, 0.0f, 0.0f);
 
     while (angleAccumulator != endAngle)
@@ -146,8 +242,29 @@ vec3 getLocalLight(vec2 location)
         float nextAngle = PI;
 
         if (endAngle >= angleAccumulator) nextAngle = endAngle;
+        
+        for (int i = 0; i < realShadows; i++)
+        {
+            if (rangeArr[i].x > angleAccumulator && rangeArr[i].x < nextAngle)
+                nextAngle = rangeArr[i].x;
 
-        colorAccumulator += lightColor.rgb * (nextAngle - angleAccumulator);
+            if (rangeArr[i].y > angleAccumulator && rangeArr[i].y < nextAngle)
+                nextAngle = rangeArr[i].y;
+        }
+
+        vec3 tempColor = lightColor.rgb;
+
+        for (int i = 0; i < realShadows; i++)
+        {
+            if (pointInRange(rangeArr[i].yx, nextAngle))
+            {
+                tempColor.r *= colorArr[i].r;
+                tempColor.g *= colorArr[i].g;
+                tempColor.b *= colorArr[i].b;
+            }
+        }
+
+        colorAccumulator += tempColor * (nextAngle - angleAccumulator);
 
         if (nextAngle == PI) angleAccumulator = -PI;
         else angleAccumulator = nextAngle;
