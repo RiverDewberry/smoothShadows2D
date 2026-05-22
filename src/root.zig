@@ -116,7 +116,7 @@ pub const ShadowData = struct {
             &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
             rl.ShaderUniformDataType.vec4);
 
-        var shadowDataBuf: [64]f32 = undefined;
+        var shadowDataBuf: [128]f32 = undefined;
 
         for (0..self.shadows.len) |i|
         {
@@ -137,8 +137,6 @@ pub const ShadowData = struct {
             .height = @intCast(self.shadows.len),
             .width = 2
         };
-
-        std.log.debug("{}", .{@as(*f32, @ptrCast(@alignCast(shadowData.data))).*});
 
         const shadowDataTex = shadowData.toTexture() catch @panic("failed to load texture");
         defer shadowDataTex.unload();
@@ -224,6 +222,21 @@ pub const ShadowData = struct {
 
         rl.endShaderMode();
         self.redrawArea.end();
+    }
+
+    pub fn drawLights(self: ShadowData) void
+    {
+        rl.drawRectangleRec(self.dest, rl.Color.black);
+        rl.beginBlendMode(rl.BlendMode.additive);
+        defer rl.endBlendMode();
+        for (0..self.lights.len) |i|
+        {
+            self.lights[i].cache.texture.drawPro(
+                self.dest, self.dest,
+                rl.Vector2.init(0, 0),
+                0, 
+                rl.Color.white);
+        }
     }
 };
 
