@@ -7,7 +7,7 @@ var shadowShader: ?rl.Shader = null;
 var lightAreaShader: ?rl.Shader = null;
 var shadowAreaShader: ?rl.Shader = null;
 
-pub const ShadowPane= struct {
+pub const ShadowPane = struct {
     color: rl.Color,
     start: rl.Vector2,
     end: rl.Vector2,
@@ -55,6 +55,7 @@ pub const ShadowData = struct {
     source: rl.Rectangle,
     dest: rl.Rectangle,
     lights: []LightPane,
+    shadows: []ShadowPane,
     redrawArea: rl.RenderTexture,
 
     pub fn init(
@@ -62,6 +63,7 @@ pub const ShadowData = struct {
         source: rl.Rectangle,
         dest: rl.Rectangle,
         lights: []LightPane,
+        shadows: []ShadowPane
     ) !ShadowData
     {
         var retval = ShadowData{
@@ -69,6 +71,7 @@ pub const ShadowData = struct {
             .dest = dest,
             .baseTexture = texture,
             .lights = lights,
+            .shadows = shadows,
             .redrawArea = try rl.RenderTexture.init(
                 @trunc(dest.width),
                 @trunc(dest.height))
@@ -113,10 +116,48 @@ pub const ShadowData = struct {
             &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
             rl.ShaderUniformDataType.vec4);
 
+        var shadowDataBuf: [64]f32 = undefined;
+
+        for (0..self.shadows.len) |i|
+        {
+            shadowDataBuf[i * 8 + 0] = self.shadows[i].start.x;
+            shadowDataBuf[i * 8 + 1] = self.shadows[i].start.y;
+            shadowDataBuf[i * 8 + 2] = self.shadows[i].end.x;
+            shadowDataBuf[i * 8 + 3] = self.shadows[i].end.y;
+            shadowDataBuf[i * 8 + 4] = self.shadows[i].color.normalize().x;
+            shadowDataBuf[i * 8 + 5] = self.shadows[i].color.normalize().y;
+            shadowDataBuf[i * 8 + 6] = self.shadows[i].color.normalize().z;
+            shadowDataBuf[i * 8 + 7] = 0;
+        }
+
+        const shadowData = rl.Image{
+            .data = &shadowDataBuf,
+            .mipmaps = 1,
+            .format = rl.PixelFormat.uncompressed_r32g32b32a32,
+            .height = @intCast(self.shadows.len),
+            .width = 2
+        };
+
+        std.log.debug("{}", .{@as(*f32, @ptrCast(@alignCast(shadowData.data))).*});
+
+        const shadowDataTex = shadowData.toTexture() catch @panic("failed to load texture");
+        defer shadowDataTex.unload();
+
         const lightColorLocation = rl.getShaderLocation(
-            shadowShader.?, "lightColor");
+            shadowShader.?, "color");
         const lightPositionLocation = rl.getShaderLocation(
             shadowShader.?, "lightPosition");
+        const shadowDataLocation = rl.getShaderLocation(
+            shadowShader.?, "shadowData");
+        const shadowCountLocation = rl.getShaderLocation(
+            shadowShader.?, "shadowCount");
+
+        rl.setShaderValue(
+            shadowShader.?,
+            shadowCountLocation,
+            &.{self.shadows.len},
+            rl.ShaderUniformDataType.int
+        );
 
         const light = self.lights[lightNum];
         light.cache.begin();
@@ -131,6 +172,7 @@ pub const ShadowData = struct {
             &[4]f32{lightColor.x, lightColor.y, lightColor.z, light.focus},
             rl.ShaderUniformDataType.vec4);
 
+        rl.setShaderValueTexture(shadowShader.?, shadowDataLocation, shadowDataTex);
         self.redrawArea.texture.draw(
             0, 0,
             rl.Color.white

@@ -16,7 +16,7 @@ pub fn main(init: std.process.Init) !void {
     defer smoothShadows2D.deinitShadowShader();
 
     var light = smoothShadows2D.LightPane.init(
-        1.0,
+        1,
         rl.Vector2.init(100, 100),
         rl.Vector2.init(400, 400),
         rl.Color.init(155, 155, 255, 255)
@@ -25,11 +25,21 @@ pub fn main(init: std.process.Init) !void {
     var lights = [_]smoothShadows2D.LightPane{light};
     _ = &light;
 
+    var shadow = smoothShadows2D.ShadowPane.init(
+        rl.Color.init(155, 155, 155, 255),
+        rl.Vector2.init(200, 400),
+        rl.Vector2.init(300, 350)
+    );
+
+    var shadows = [_]smoothShadows2D.ShadowPane{shadow};
+    _ = &shadow;
+
     var shadowDrawer = try smoothShadows2D.ShadowData.init(
         baseTexture,
         rl.Rectangle.init(0, 0, 1, 1),
         rl.Rectangle.init(0, 0, 750, 750),
-        &lights
+        &lights,
+        &shadows
     );
     defer shadowDrawer.deinit();
 
@@ -57,6 +67,18 @@ pub fn main(init: std.process.Init) !void {
             }
 
             flipFlop = !flipFlop;
+        } else if (rl.isKeyDown(rl.KeyboardKey.w))
+        {
+            shadowDrawer.addLightArea(0);
+            lights[0].start.x += 1;
+            if (flipFlop) {
+                lights[0].focus += 0.001;
+            }
+            else {
+                lights[0].focus -= 0.001;
+            }
+            shadowDrawer.addLightArea(0);
+            shadowDrawer.recalculateLight(0);
         }
 
         //shadowDrawer.dest.width = @floatFromInt(rl.getScreenWidth());
@@ -77,6 +99,16 @@ pub fn main(init: std.process.Init) !void {
         rl.drawRectangleLines(
             @trunc(lights[0].end.x - 10),
             @trunc(lights[0].end.y - 10),
+            20, 20, rl.Color.blue);
+
+        rl.drawRectangleLines(
+            @trunc(shadows[0].start.x - 10),
+            @trunc(shadows[0].start.y - 10),
+            20, 20, rl.Color.red);
+
+        rl.drawRectangleLines(
+            @trunc(shadows[0].end.x - 10),
+            @trunc(shadows[0].end.y - 10),
             20, 20, rl.Color.blue);
 
         var fpsTextBuffer: [256:0]u8 = undefined;
