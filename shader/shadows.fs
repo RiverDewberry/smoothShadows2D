@@ -139,21 +139,41 @@ vec3 getLocalLight(vec2 location)
 
         if (endAngle >= angleAccumulator)
         {
-            if (taotnotdvotl > angleAccumulator && taotnotdvotl < endAngle)
-                return lightColor.xyz;
-            else return vec3(0.0f, 0.0f, 0.0f);
+            if (!(taotnotdvotl > angleAccumulator && taotnotdvotl < endAngle))
+                return vec3(0.0f, 0.0f, 0.0f);
         } else {
             if (taotnotdvotl < angleAccumulator && taotnotdvotl > endAngle)
                 return vec3(0.0f, 0.0f, 0.0f);
-            else return lightColor.xyz;
         }
 
+        vec3 retColor = color.rgb;
+
+        for (int i = 0; i < shadowCount; i++)
+        {
+            vec4 temp = texelFetch(shadowData, ivec2(0, i), 0);
+            if (isLeft(location, temp)) continue;
+            if (!inShadow(temp, lightPosition, location)) continue;
+
+            vec2 tempRange = getAngleRange(location, temp);
+
+            if (pointInRange(tempRange, taotnotdvotl)) continue;
+
+            if (abs(tempRange.x - tempRange.y) < 0.00001f) continue;
+
+            vec3 tempColor = texelFetch(shadowData, ivec2(1, i), 0).rgb;
+
+            retColor.r *= tempColor.r;
+            retColor.g *= tempColor.g;
+            retColor.b *= tempColor.b;
+        }
+
+        return retColor;
     } else if (lightColor.w != 1.0f)
     {
         // the arctan of the normal of the direction vector of the line
         float shadowCenterAngle = atan(
-           lightPosition.z - lightPosition.x, lightPosition.y - lightPosition.w
-        );
+                lightPosition.z - lightPosition.x, lightPosition.y - lightPosition.w
+                );
 
         float shadowStartAngle = shadowCenterAngle + lightColor.w * HALF_PI;
         float shadowEndAngle = shadowCenterAngle - lightColor.w * HALF_PI;
