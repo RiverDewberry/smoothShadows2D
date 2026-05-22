@@ -15,24 +15,52 @@ pub fn main(init: std.process.Init) !void {
     try smoothShadows2D.initShadowShader();
     defer smoothShadows2D.deinitShadowShader();
 
-    var light = smoothShadows2D.LightPane.init(
-        1,
-        rl.Vector2.init(100, 100),
-        rl.Vector2.init(400, 400),
-        rl.Color.init(155, 155, 255, 255)
-    );
+    var lights = [_]smoothShadows2D.LightPane{
+        smoothShadows2D.LightPane.init(1,
+            rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
+            rl.Color.init(255, 255, 255, 255)),
+        smoothShadows2D.LightPane.init(1,
+            rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
+            rl.Color.init(0, 255, 255, 255)),
+        smoothShadows2D.LightPane.init(1,
+            rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
+            rl.Color.init(255, 0, 255, 255)),
+        smoothShadows2D.LightPane.init(1,
+            rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
+            rl.Color.init(255, 255, 0, 255))
+        };
 
-    var lights = [_]smoothShadows2D.LightPane{light};
-    _ = &light;
+    var shadows = [_]smoothShadows2D.ShadowPane{
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(155, 255, 55, 255), rl.Vector2.init(100, 400), rl.Vector2.init(200, 350)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(155, 255, 55, 255), rl.Vector2.init(200, 350), rl.Vector2.init(200, 200)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(155, 255, 55, 255), rl.Vector2.init(200, 200), rl.Vector2.init(100, 400)),
 
-    var shadow = smoothShadows2D.ShadowPane.init(
-        rl.Color.init(155, 155, 155, 255),
-        rl.Vector2.init(200, 400),
-        rl.Vector2.init(300, 350)
-    );
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(255, 55, 155, 255), rl.Vector2.init(400, 200), rl.Vector2.init(500, 250)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(255, 55, 155, 255), rl.Vector2.init(500, 250), rl.Vector2.init(600, 100)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(255, 55, 155, 255), rl.Vector2.init(600, 100), rl.Vector2.init(400, 200)),
 
-    var shadows = [_]smoothShadows2D.ShadowPane{shadow};
-    _ = &shadow;
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(55, 155, 255, 255), rl.Vector2.init(400, 550), rl.Vector2.init(550, 500)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(55, 155, 255, 255), rl.Vector2.init(550, 500), rl.Vector2.init(500, 350)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(55, 155, 255, 255), rl.Vector2.init(500, 350), rl.Vector2.init(400, 550)),
+
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(0, 0, 0, 255), rl.Vector2.init(360, 360), rl.Vector2.init(360, 385)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(0, 0, 0, 255), rl.Vector2.init(360, 385), rl.Vector2.init(385, 385)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(0, 0, 0, 255), rl.Vector2.init(385, 385), rl.Vector2.init(385, 360)),
+        smoothShadows2D.ShadowPane.init(
+            rl.Color.init(0, 0, 0, 255), rl.Vector2.init(385, 360), rl.Vector2.init(360, 360))
+    };
 
     var shadowDrawer = try smoothShadows2D.ShadowData.init(
         baseTexture,
@@ -46,73 +74,79 @@ pub fn main(init: std.process.Init) !void {
     //rl.setTargetFPS(10);
 
     var flipFlop = false;
+    var paneNum: usize = 0;
+    var hideBoxes = false;
 
     while (!rl.windowShouldClose())
     {
         rl.beginDrawing();
 
         if (rl.isMouseButtonPressed(rl.MouseButton.left))
+            flipFlop = !flipFlop;
+
+        if (rl.isMouseButtonDown(rl.MouseButton.left))
         {
             if (flipFlop == true)
             {
-                shadowDrawer.addLightArea(0);
-                lights[0].start = rl.getMousePosition();
-                shadowDrawer.addLightArea(0);
-                shadowDrawer.recalculateLight(0);
+                shadowDrawer.addLightArea(paneNum);
+                lights[paneNum].start = rl.getMousePosition();
+                shadowDrawer.addLightArea(paneNum);
+                shadowDrawer.recalculateLight(paneNum);
             } else {
-                shadowDrawer.addLightArea(0);
-                lights[0].end = rl.getMousePosition();
-                shadowDrawer.addLightArea(0);
-                shadowDrawer.recalculateLight(0);
+                shadowDrawer.addLightArea(paneNum);
+                lights[paneNum].end = rl.getMousePosition();
+                shadowDrawer.addLightArea(paneNum);
+                shadowDrawer.recalculateLight(paneNum);
             }
 
-            flipFlop = !flipFlop;
-        } else if (rl.isKeyDown(rl.KeyboardKey.w))
-        {
-            shadowDrawer.addLightArea(0);
-            lights[0].start.x += 1;
-            if (flipFlop) {
-                lights[0].focus += 0.001;
-            }
-            else {
-                lights[0].focus -= 0.001;
-            }
-            shadowDrawer.addLightArea(0);
-            shadowDrawer.recalculateLight(0);
         }
+
+        if (rl.isKeyDown(rl.KeyboardKey.w))
+        {
+            shadowDrawer.addLightArea(paneNum);
+            lights[paneNum].focus += 0.01;
+            if (lights[paneNum].focus > 1) lights[paneNum].focus = 1;
+            shadowDrawer.addLightArea(paneNum);
+            shadowDrawer.recalculateLight(paneNum);
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.s))
+        {
+            shadowDrawer.addLightArea(paneNum);
+                lights[paneNum].focus -= 0.01;
+            if (lights[paneNum].focus < 0) lights[paneNum].focus = 0;
+            shadowDrawer.addLightArea(paneNum);
+            shadowDrawer.recalculateLight(paneNum);
+        }
+
+        if (rl.isKeyPressed(rl.KeyboardKey.h))
+            hideBoxes = !hideBoxes;
+
+        if (rl.isKeyPressed(rl.KeyboardKey.one))paneNum = 0;
+        if (rl.isKeyPressed(rl.KeyboardKey.two))paneNum = 1;
+        if (rl.isKeyPressed(rl.KeyboardKey.three))paneNum = 2;
+        if (rl.isKeyPressed(rl.KeyboardKey.four))paneNum = 3;
 
         //shadowDrawer.dest.width = @floatFromInt(rl.getScreenWidth());
         //shadowDrawer.dest.height = @floatFromInt(rl.getScreenHeight());
         
-        shadowDrawer.lights[0].cache.texture.drawPro(
-            rl.Rectangle.init(0, 0, 750, 750),
-            rl.Rectangle.init(0, 0, 750, 750),
-            rl.Vector2.init(0, 0),
-            0, 
-            rl.Color.white);
+        shadowDrawer.drawLights();
 
-        rl.drawRectangleLines(
-            @trunc(lights[0].start.x - 10),
-            @trunc(lights[0].start.y - 10),
-            20, 20, rl.Color.red);
+        if (!hideBoxes)
+        {
+            rl.drawRectangleLines(
+                @trunc(lights[paneNum].start.x - 10),
+                @trunc(lights[paneNum].start.y - 10),
+                20, 20, rl.Color.red);
 
-        rl.drawRectangleLines(
-            @trunc(lights[0].end.x - 10),
-            @trunc(lights[0].end.y - 10),
-            20, 20, rl.Color.blue);
-
-        rl.drawRectangleLines(
-            @trunc(shadows[0].start.x - 10),
-            @trunc(shadows[0].start.y - 10),
-            20, 20, rl.Color.red);
-
-        rl.drawRectangleLines(
-            @trunc(shadows[0].end.x - 10),
-            @trunc(shadows[0].end.y - 10),
-            20, 20, rl.Color.blue);
+            rl.drawRectangleLines(
+                @trunc(lights[paneNum].end.x - 10),
+                @trunc(lights[paneNum].end.y - 10),
+                20, 20, rl.Color.blue);
+        }
 
         var fpsTextBuffer: [256:0]u8 = undefined;
-        _ = try std.fmt.bufPrint(&fpsTextBuffer, "{}\x00", .{rl.getFPS()});
+        _ = try std.fmt.bufPrint(&fpsTextBuffer, "FPS: {}\x00", .{rl.getFPS()});
         rl.drawText(
             &fpsTextBuffer,
             10,
