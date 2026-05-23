@@ -64,10 +64,10 @@ pub fn main(init: std.process.Init) !void {
 
     var shadowDrawer = try smoothShadows2D.ShadowData.init(
         baseTexture,
-        rl.Rectangle.init(0, 0, 1, 1),
         rl.Rectangle.init(0, 0, 750, 750),
         &lights,
-        &shadows
+        &shadows,
+        rl.Vector2{.x = 0, .y = 0}
     );
     defer shadowDrawer.deinit();
 
@@ -89,12 +89,18 @@ pub fn main(init: std.process.Init) !void {
             if (flipFlop == true)
             {
                 shadowDrawer.addLightArea(paneNum);
-                lights[paneNum].start = rl.getMousePosition();
+                lights[paneNum].start = rl.Vector2.init(
+                    rl.getMousePosition().x + shadowDrawer.offset.x,
+                    rl.getMousePosition().y + shadowDrawer.offset.y
+                );
                 shadowDrawer.addLightArea(paneNum);
                 shadowDrawer.recalculateLight(paneNum);
             } else {
                 shadowDrawer.addLightArea(paneNum);
-                lights[paneNum].end = rl.getMousePosition();
+                lights[paneNum].end = rl.Vector2.init(
+                    rl.getMousePosition().x + shadowDrawer.offset.x,
+                    rl.getMousePosition().y + shadowDrawer.offset.y
+                );
                 shadowDrawer.addLightArea(paneNum);
                 shadowDrawer.recalculateLight(paneNum);
             }
@@ -122,26 +128,59 @@ pub fn main(init: std.process.Init) !void {
         if (rl.isKeyPressed(rl.KeyboardKey.h))
             hideBoxes = !hideBoxes;
 
+        if (rl.isKeyDown(rl.KeyboardKey.up))
+        {
+            try shadowDrawer.updateOffset(
+                rl.Vector2.init(shadowDrawer.offset.x, shadowDrawer.offset.y + 5)
+            );
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.down))
+        {
+            try shadowDrawer.updateOffset(
+                rl.Vector2.init(shadowDrawer.offset.x, shadowDrawer.offset.y - 5)
+            );
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.right))
+        {
+            try shadowDrawer.updateOffset(
+                rl.Vector2.init(shadowDrawer.offset.x - 5, shadowDrawer.offset.y)
+            );
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.left))
+        {
+            try shadowDrawer.updateOffset(
+                rl.Vector2.init(shadowDrawer.offset.x + 5, shadowDrawer.offset.y)
+            );
+        }
+
         if (rl.isKeyPressed(rl.KeyboardKey.one))paneNum = 0;
         if (rl.isKeyPressed(rl.KeyboardKey.two))paneNum = 1;
         if (rl.isKeyPressed(rl.KeyboardKey.three))paneNum = 2;
         if (rl.isKeyPressed(rl.KeyboardKey.four))paneNum = 3;
 
-        //shadowDrawer.dest.width = @floatFromInt(rl.getScreenWidth());
-        //shadowDrawer.dest.height = @floatFromInt(rl.getScreenHeight());
+        if (rl.isWindowResized())
+        {
+            try shadowDrawer.resize(
+                @floatFromInt(rl.getScreenWidth()),
+                @floatFromInt(rl.getScreenHeight())
+            );
+        }
         
         shadowDrawer.drawLights();
 
         if (!hideBoxes)
         {
             rl.drawRectangleLines(
-                @trunc(lights[paneNum].start.x - 10),
-                @trunc(lights[paneNum].start.y - 10),
+                @trunc(lights[paneNum].start.x - 10 - shadowDrawer.offset.x),
+                @trunc(lights[paneNum].start.y - 10 - shadowDrawer.offset.y),
                 20, 20, rl.Color.red);
 
             rl.drawRectangleLines(
-                @trunc(lights[paneNum].end.x - 10),
-                @trunc(lights[paneNum].end.y - 10),
+                @trunc(lights[paneNum].end.x - 10 - shadowDrawer.offset.x),
+                @trunc(lights[paneNum].end.y - 10 - shadowDrawer.offset.y),
                 20, 20, rl.Color.blue);
         }
 
