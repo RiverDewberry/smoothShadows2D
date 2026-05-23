@@ -52,26 +52,26 @@ pub const LightPane = struct {
 
 pub const ShadowData = struct {
     baseTexture: rl.Texture,
-    source: rl.Rectangle,
     dest: rl.Rectangle,
     lights: []LightPane,
     shadows: []ShadowPane,
     redrawArea: rl.RenderTexture,
+    offset: rl.Vector2,
 
     pub fn init(
         texture: rl.Texture,
-        source: rl.Rectangle,
         dest: rl.Rectangle,
         lights: []LightPane,
-        shadows: []ShadowPane
+        shadows: []ShadowPane,
+        offset: rl.Vector2,
     ) !ShadowData
     {
         var retval = ShadowData{
-            .source = source,
             .dest = dest,
             .baseTexture = texture,
             .lights = lights,
             .shadows = shadows,
+            .offset = offset,
             .redrawArea = try rl.RenderTexture.init(
                 @trunc(dest.width),
                 @trunc(dest.height))
@@ -96,6 +96,40 @@ pub const ShadowData = struct {
         return retval;
     }
 
+    pub fn resize(self: *ShadowData, newWidth: f32, newHeight: f32) !void
+    {
+        self.dest.width = newWidth;
+        self.dest.height = newHeight;
+
+        for (self.lights, 0..) |_, i|
+        {
+            var newCache = try rl.RenderTexture.init(
+                @trunc(newWidth),
+                @trunc(newHeight)
+            );
+
+            newCache.begin();
+            rl.clearBackground(rl.Color.black);
+            newCache.end();
+
+            self.redrawArea.unload();
+            self.redrawArea = try rl.RenderTexture.init(
+                @trunc(newWidth),
+                @trunc(newHeight)
+            );
+
+            self.redrawArea.begin();
+            rl.clearBackground(rl.Color.white);
+            self.redrawArea.end();
+
+            self.lights[i].cache.unload();
+            self.lights[i].cache = newCache;
+
+            self.recalculateLight(i);
+        }
+
+    }
+
     pub fn deinit(self: ShadowData) void
     {
         for (self.lights) |light|
@@ -113,7 +147,7 @@ pub const ShadowData = struct {
             shadowShader.?, "position");
         rl.setShaderValue(
             shadowShader.?, positionLocation, 
-            &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
+            &[4]f32{self.dest.x + self.offset.x, self.dest.y + self.offset.y, self.dest.width, self.dest.height},
             rl.ShaderUniformDataType.vec4);
 
         var shadowDataBuf: [128]f32 = undefined;
@@ -195,7 +229,8 @@ pub const ShadowData = struct {
             lightAreaShader.?, "position");
         rl.setShaderValue(
             lightAreaShader.?, positionLocation, 
-            &[4]f32{self.dest.x, self.dest.y, self.dest.width, self.dest.height},
+            &[4]f32{self.dest.x + self.offset.x, self.dest.y + self.offset.y,
+                self.dest.width, self.dest.height},
             rl.ShaderUniformDataType.vec4);
 
         const lightPositionLocation = rl.getShaderLocation(
@@ -213,7 +248,7 @@ pub const ShadowData = struct {
             rl.ShaderUniformDataType.float);
 
         self.baseTexture.drawPro(
-            self.source,
+            rl.Rectangle.init(0, 0, 1, 1),
             self.dest,
             rl.Vector2{.x = 0, .y = 0},
             0,
@@ -237,6 +272,42 @@ pub const ShadowData = struct {
                 0, 
                 rl.Color.white);
         }
+    }
+
+    pub fn updateOffset(self: *ShadowData, newOffset: rl.Vector2) !void
+    {
+        const deltaOffset = rl.Vector2.init(
+            self.offset.x - newOffset.x,
+            self.offset.y - newOffset.y);
+
+        self.offset = newOffset;
+
+        const temp = try rl.RenderTexture.init(
+                @trunc(self.dest.width),
+                @trunc(self.dest.height));
+        defer temp.unload();
+
+        for (self.lights, 0..) |light, i|
+        {
+            self.redrawArea.begin();
+            rl.clearBackground(rl.Color.white);
+            rl.drawRectangleRec(
+                rl.Rectangle.init(
+                    deltaOffset.x + 1,
+                    deltaOffset.y + 1,
+                    self.dest.width - 2,
+                    self.dest.height - 2),
+                rl.Color.black);
+            self.redrawArea.end();
+            temp.begin();
+            light.cache.texture.drawV(deltaOffset, rl.Color.white);
+            temp.end();
+            light.cache.begin();
+            temp.texture.draw(0, 0, rl.Color.white);
+            light.cache.end();
+            self.recalculateLight(i);
+        }
+
     }
 };
 
