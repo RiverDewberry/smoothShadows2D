@@ -21,6 +21,8 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "smoothShadows2D", .module = shadows },
             },
         }),
+        .use_llvm = true,
+        .use_lld = true,
     });
     
     const raylib_dep = b.dependency("raylib_zig", .{
