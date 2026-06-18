@@ -21,13 +21,13 @@ pub fn main(init: std.process.Init) !void {
             rl.Color.init(255, 255, 255, 255)),
         smoothShadows2D.LightPane.init(1,
             rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
-            rl.Color.init(0, 255, 255, 255)),
+            rl.Color.init(0, 0, 255, 255)),
         smoothShadows2D.LightPane.init(1,
             rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
-            rl.Color.init(255, 0, 255, 255)),
+            rl.Color.init(255, 0, 0, 255)),
         smoothShadows2D.LightPane.init(1,
             rl.Vector2.init(0, 0), rl.Vector2.init(0, 0),
-            rl.Color.init(255, 255, 0, 255))
+            rl.Color.init(0, 255, 0, 255))
         };
 
     var shadows = [_]smoothShadows2D.ShadowPane{
